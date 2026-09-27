@@ -50,7 +50,7 @@ Related fixes satisfy qualification and controller probes:
   correction on the selected SDK, including in a pristine baseline checkout.
 
 The web isolate-manager fallback runs on the UI thread. Its syntax/fold tasks
-retain one latest pending request and run after an editor frame plus 16 ms, so
+retain one latest pending request and run after an editor frame plus a 50 ms quiet period, so
 source input can paint first. Close cancels the pending timer and task. Native
 isolate scheduling is unchanged. A Chrome lifecycle test verifies latest-source
 analysis and immediate disposal; browser latency remains a separate gate.
@@ -70,7 +70,7 @@ Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 166 tests
 (the web-only test is skipped there). `flutter test --platform chrome
 test/web_analysis_lifecycle_test.dart` passes its browser lifecycle case. The
 native suite includes
-including thirteen exact-source regressions in `test/exact_source_test.dart`
+thirteen exact-source regressions in `test/exact_source_test.dart`
 and two keyboard-command separator-join regressions in `test/exact_command_seams_test.dart`.
 They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous
 observation, copy/paste channel roundtrip, composing state, folds, command

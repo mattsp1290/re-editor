@@ -34,7 +34,7 @@ class _IsolateTasker<Req, Res> {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           _webFrameScheduled = false;
           if (_closed) return;
-          _webTimer = Timer(const Duration(milliseconds: 16), () {
+          _webTimer = Timer(const Duration(milliseconds: 50), () {
             final task = _pendingWebTask;
             _pendingWebTask = null;
             if (!_closed) task?.call();
