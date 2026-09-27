@@ -14,6 +14,7 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
 
   final _CodeFloatingCursorController _floatingCursorController;
   Timer? _floatingCursorScrollTimer;
+  Timer? _composingRetryTimer;
 
   GlobalKey? _editorKey;
 
@@ -340,6 +341,8 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
 
   @override
   void dispose() {
+    _composingRetryTimer?.cancel();
+    _floatingCursorScrollTimer?.cancel();
     super.dispose();
     _closeInputConnectionIfNeeded();
     _controller.removeListener(_onCodeEditingChanged);
@@ -377,6 +380,8 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
   void _updateRemoteComposingIfNeeded({
     bool retry = false
   }) {
+    _composingRetryTimer?.cancel();
+    _composingRetryTimer = null;
     if (!_hasInputConnection) {
       return;
     }
@@ -397,7 +402,7 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
     if (caret != null) {
       _textInputConnection!.setCaretRect(Rect.fromLTWH(caret.dx, caret.dy, render.cursorWidth, render.lineHeight));
     } else if (!retry) {
-      Future.delayed(const Duration(milliseconds: 10), () {
+      _composingRetryTimer = Timer(const Duration(milliseconds: 10), () {
         _updateRemoteComposingIfNeeded(
           retry: true
         );

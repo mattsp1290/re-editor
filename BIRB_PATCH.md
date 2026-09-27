@@ -29,6 +29,10 @@ Three related fixes satisfy qualification probes:
   delete operation. Upstream's own `deleteForward()` test fails without this
   correction on the selected SDK, including in a pristine baseline checkout.
 
+Pending focus, drag-scroll and caret-position retry timers are cancelled when
+their view/input owner is disposed. `view_disposal_test.dart` exercises twenty
+immediate mount/edit/detach cycles without draining timers to hide leaks.
+
 No private APIs are exposed. Public consumers should encapsulate engine types.
 This patch alone does not qualify a complete editor: geometry, rendering,
 worker lifecycle, real browser/native input and the full Foundation W1 matrix
@@ -36,7 +40,7 @@ remain separate gates.
 
 ## Verification and upgrades
 
-Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 151 tests,
+Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 152 tests,
 including eleven exact-source regressions in `test/exact_source_test.dart`.
 They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous
 observation, copy/paste channel roundtrip, composing state, folds, command
@@ -48,7 +52,7 @@ unused debug declarations; it is not a passing analysis gate. No warning
 suppression is added by this patch. Foundation separately analyzes its package.
 
 Pin a full pushed fork SHA in consumers without dependency overrides. Before
-upgrading, compare the three patched source files with the upstream release,
+upgrading, compare the five patched source files with the upstream release,
 run all upstream and exact-source tests, then rerun Foundation's entire W1 and
 platform acceptance matrix. Remove the patch only when the replacement
 upstream release passes those same requirements. Do not claim source fidelity

@@ -26,6 +26,15 @@ class _CodeSelectionGestureDetector extends StatefulWidget {
 }
 
 class _CodeSelectionGestureDetectorState extends State<_CodeSelectionGestureDetector> {
+  Timer? _focusTimer;
+  Timer? _dragTimer;
+
+  @override
+  void dispose() {
+    _focusTimer?.cancel();
+    _dragTimer?.cancel();
+    super.dispose();
+  }
   Offset? _dragPosition;
   bool _dragging = false;
   DateTime? _pointerTapTimestamp;
@@ -141,7 +150,8 @@ class _CodeSelectionGestureDetectorState extends State<_CodeSelectionGestureDete
           onPointerDown: (event) {
             _tapping = render.isValidPointer2(event.position);
             // A trick, delay the focus request here to avoid loss.
-            Future(widget.inputController.ensureInput);
+            _focusTimer?.cancel();
+            _focusTimer = Timer(Duration.zero, widget.inputController.ensureInput);
             _onDesktopTapDown(event.position);
           },
           onPointerUp: (event) {
@@ -374,7 +384,8 @@ class _CodeSelectionGestureDetectorState extends State<_CodeSelectionGestureDete
 
   void _autoScrollWhenDragging() {
     final Offset? position = _dragPosition;
-    Future.delayed(const Duration(milliseconds: 100), (() {
+    _dragTimer?.cancel();
+    _dragTimer = Timer(const Duration(milliseconds: 100), (() {
       if (_dragPosition == null || position == null) {
         return;
       }
