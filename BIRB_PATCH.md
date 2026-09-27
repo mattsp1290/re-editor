@@ -24,6 +24,9 @@ Related fixes satisfy qualification and controller probes:
 
 - Nested `runRevocableOp` calls share one undo record, including the first
   operation in an empty history; exception cleanup restores transaction state.
+  Exact-source groups also seal their trailing boundary so subsequent typing
+  cannot absorb a completed command. Four transaction-boundary regressions
+  cover nested/no-op groups, composing input and redo branching.
 - Exact-source mode keeps selection and folding changes in the current history
   node without creating undo entries or discarding redo after navigation.
 - All exact-source value mutations check for CR and LF joining into one logical
@@ -54,7 +57,7 @@ remain separate gates.
 
 ## Verification and upgrades
 
-Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 160 tests,
+Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 164 tests,
 including thirteen exact-source regressions in `test/exact_source_test.dart`
 and two keyboard-command separator-join regressions in `test/exact_command_seams_test.dart`.
 They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous

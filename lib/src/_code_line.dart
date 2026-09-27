@@ -1132,7 +1132,9 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
     } finally {
       _revocableOpDepth--;
       if (_revocableOpDepth == 0) {
-        _cache.markNewRecord(false);
+        // Exact-source transactions own both history boundaries. Otherwise
+        // subsequent same-line typing can overwrite the command's undo node.
+        _cache.markNewRecord(options.preserveLineBreaks);
       }
     }
   }
