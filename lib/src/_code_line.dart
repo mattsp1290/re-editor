@@ -2046,6 +2046,14 @@ class _CodeLineEditingCache {
     if (_node.value == controller.value) {
       return;
     }
+    // In exact-source mode, presentation changes must not create an undo
+    // entry or discard the redo branch. Keep the current source node's view
+    // state so the next source edit still restores the user's selection.
+    if (controller.options.preserveLineBreaks &&
+        _node.value.codeLines.asString(controller.options.lineBreak, true, true) == controller.text) {
+      _node.value = controller.value;
+      return;
+    }
     if (_node.isInitial) {
       _appendNewNode();
       return;

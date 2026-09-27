@@ -56,6 +56,22 @@ void main() {
     exact(controller, 'a\r\nb\r');
   });
 
+  test('selection and folding neither create history nor discard redo', () {
+    final controller = create('a\r\nb\rc\n');
+    controller.selection = const CodeLineSelection.collapsed(index: 0, offset: 1);
+    expect(controller.canUndo, isFalse);
+    controller.collapseChunk(1, 3);
+    expect(controller.canUndo, isFalse);
+    controller.replaceSelection('X');
+    controller.undo();
+    exact(controller, 'a\r\nb\rc\n');
+    controller.selection = const CodeLineSelection.collapsed(index: 0, offset: 0);
+    controller.expandChunk(1);
+    expect(controller.canRedo, isTrue);
+    controller.redo();
+    exact(controller, 'aX\r\nb\rc\n');
+  });
+
   test('nested folds retain source and copied complete selection', () {
     const source = '{\r\n {\r  x\n }\r\n}\nend';
     final controller = create(source);
