@@ -597,6 +597,12 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
       }
     }
 
+    if (offset == current.length) {
+      selection = CodeLineSelection.collapsed(index: selection.extentIndex, offset: offset);
+      makeCursorVisible();
+      return;
+    }
+
     final int codeUnit = current.codeUnitAt(offset);
     bool isBeforeAlphanumeric = _isAlphanumeric(codeUnit);
     int i = offset + 1;
@@ -746,7 +752,7 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
   }
 
   @override
-  void extendSelectionToWordBoundaryForward() {
+  void extendSelectionToWordBoundaryBackward() {
     if (selection.extentOffset == 0) {
       final int newIndex = selection.extentIndex - 1;
 
@@ -806,7 +812,7 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
   }
 
   @override
-  void extendSelectionToWordBoundaryBackward() {
+  void extendSelectionToWordBoundaryForward() {
     if (selection.extentOffset == extentLine.text.length) {
       final int newIndex = selection.extentIndex + 1;
 
@@ -835,6 +841,12 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
       } else {
         break;
       }
+    }
+
+    if (offset == current.length) {
+      selection = selection.copyWith(extentOffset: offset);
+      makeCursorVisible();
+      return;
     }
 
     final int codeUnit = current.codeUnitAt(offset);

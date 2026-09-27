@@ -42,6 +42,9 @@ Related fixes satisfy qualification and controller probes:
   delta mode. Selection-only platform messages must not replace a multiline
   selection with the unchanged base-line text. `full_input_value_test.dart`
   covers replacement, pairing, composition, deletion and exact undo.
+- Word-selection extension follows its declared forward/backward direction.
+  Forward word movement/extension stops safely at trailing whitespace instead
+  of indexing beyond the line; two regressions cover both modes.
 - Forward delete between paired delimiters uses the existing paired backward
   delete operation. Upstream's own `deleteForward()` test fails without this
   correction on the selected SDK, including in a pristine baseline checkout.
@@ -57,7 +60,7 @@ remain separate gates.
 
 ## Verification and upgrades
 
-Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 164 tests,
+Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 166 tests,
 including thirteen exact-source regressions in `test/exact_source_test.dart`
 and two keyboard-command separator-join regressions in `test/exact_command_seams_test.dart`.
 They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous
