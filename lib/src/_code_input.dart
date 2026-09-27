@@ -134,6 +134,10 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
 
   @override
   void updateEditingValueWithDeltas(List<TextEditingDelta> textEditingDeltas) {
+    if (_controller.options.preserveLineBreaks && !selection.isSameLine &&
+        textEditingDeltas.every((delta) => delta is TextEditingDeltaNonTextUpdate)) {
+      return;
+    }
     if (_updateCausedByFloatingCursor) {
       // This is necessary because otherwise the content of the line where the floating cursor was started
       // will be pasted over to the line where the floating cursor was stopped.
@@ -189,6 +193,43 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
 
   @override
   void updateEditingValue(TextEditingValue textEditingValue) {
+    if (_readOnly || !_controller.options.preserveLineBreaks || _remoteEditingValue == null) {
+      return;
+    }
+    final TextEditingValue oldValue = _remoteEditingValue!;
+    // The native selection can span several source lines while the platform
+    // input contains only its base line. A selection-only platform update must
+    // never replace that source range with the unchanged base-line text.
+    if (oldValue.text == textEditingValue.text && !selection.isSameLine) {
+      return;
+    }
+    int start = 0;
+    while (start < oldValue.text.length &&
+        start < textEditingValue.text.length &&
+        oldValue.text.codeUnitAt(start) == textEditingValue.text.codeUnitAt(start)) {
+      start++;
+    }
+    int oldEnd = oldValue.text.length;
+    int newEnd = textEditingValue.text.length;
+    while (oldEnd > start && newEnd > start &&
+        oldValue.text.codeUnitAt(oldEnd - 1) == textEditingValue.text.codeUnitAt(newEnd - 1)) {
+      oldEnd--;
+      newEnd--;
+    }
+    updateEditingValueWithDeltas([
+      TextEditingDelta.fromJSON({
+        'oldText': oldValue.text,
+        'deltaText': textEditingValue.text.substring(start, newEnd),
+        'deltaStart': oldValue.text == textEditingValue.text ? -1 : start,
+        'deltaEnd': oldValue.text == textEditingValue.text ? -1 : oldEnd,
+        'selectionBase': textEditingValue.selection.baseOffset,
+        'selectionExtent': textEditingValue.selection.extentOffset,
+        'selectionAffinity': textEditingValue.selection.affinity.toString(),
+        'selectionIsDirectional': textEditingValue.selection.isDirectional,
+        'composingBase': textEditingValue.composing.start,
+        'composingExtent': textEditingValue.composing.end,
+      })
+    ]);
   }
 
   @override
@@ -447,7 +488,10 @@ class _CodeInputController extends ChangeNotifier implements DeltaTextInputClien
       final TextInputConnection connection = TextInput.attach(this,
         _TextInputConfiguration(
           flutterViewId: View.maybeOf(context)?.viewId ?? 0,
-          enableDeltaModel: true,
+          // Flutter 3.47.1's semantic web input omits the beforeinput hook
+          // needed to produce text deltas. Bridge full web editing values
+          // through the existing delta pipeline in exact-source mode.
+          enableDeltaModel: !kIsWeb || !_controller.options.preserveLineBreaks,
           inputAction: TextInputAction.newline,
           autocorrect: false,
           smartDashesType: SmartDashesType.disabled,

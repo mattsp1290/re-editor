@@ -32,6 +32,13 @@ Related fixes satisfy qualification and controller probes:
   its end; undo restores the prior value, including folds and selection.
   Selection-only values sharing the existing line collection skip this check.
 - Select-all expands a fold at the document tail so its contents are included.
+- Exact-source web input accepts full editing values and translates them into
+  the existing delta/pairing/composition pipeline. Flutter 3.47.1's semantic
+  web text field omits `beforeinput`, so delta mode reports text edits as
+  selection-only changes when accessibility is enabled. Native input retains
+  delta mode. Selection-only platform messages must not replace a multiline
+  selection with the unchanged base-line text. `full_input_value_test.dart`
+  covers replacement, pairing, composition, deletion and exact undo.
 - Forward delete between paired delimiters uses the existing paired backward
   delete operation. Upstream's own `deleteForward()` test fails without this
   correction on the selected SDK, including in a pristine baseline checkout.
@@ -47,7 +54,7 @@ remain separate gates.
 
 ## Verification and upgrades
 
-Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 158 tests,
+Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 160 tests,
 including thirteen exact-source regressions in `test/exact_source_test.dart`
 and two keyboard-command separator-join regressions in `test/exact_command_seams_test.dart`.
 They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous
