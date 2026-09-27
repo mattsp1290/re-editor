@@ -19,6 +19,7 @@ void main() {
 
   void exact(CodeLineEditingController controller, String source) {
     expect(utf8.encode(controller.text), utf8.encode(source));
+    expect(controller.lineCount, RegExp(r'\r\n|\r|\n').allMatches(source).length + 1);
   }
 
   test('exact load, selected copy source and synchronous replacement', () {

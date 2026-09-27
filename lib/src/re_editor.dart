@@ -27,6 +27,7 @@ part '_code_highlight.dart';
 part '_code_indicator.dart';
 part '_code_input.dart';
 part '_code_line.dart';
+part '_code_line_exact.dart';
 part '_code_lines.dart';
 part '_code_paragraph.dart';
 part '_code_scroll.dart';
