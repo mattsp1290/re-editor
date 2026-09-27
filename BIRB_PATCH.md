@@ -1,0 +1,55 @@
+# Birb exact-source patch
+
+Owner: Matt Spurlin (`mattsp1290/re-editor`), for flutter-foundation's native
+editor qualification. Based on upstream re_editor 0.10.0 commit
+`0a2a7d832011431d123b1b9391a481171cb4b849`. Its `lib/` directory matches the
+publisher archive SHA-256
+`66671c4774a6b4c5254c9a53ab35a083e7e7da9ae371c519bcf491c70a2a4e56`.
+Keep the upstream MIT LICENSE and dependency licenses when distributing.
+
+## Scope
+
+`CodeLineOptions(preserveLineBreaks: true)` retains LF, CR and CRLF in loaded and
+inserted source. `lineBreak` still selects separators for the Enter command.
+The default remains upstream normalization. Direct construction from exact
+source uses `CodeLines.fromText(source, preserveLineBreaks: true)`.
+
+Each existing CodeLine carries optional separator metadata. Parsing, text and
+selection serialization, clipboard, range replacement, joins, indentation and
+folds preserve it. The existing engine history stores it as part of value
+equality, including newline-only changes. Rendering/highlighting can continue
+to request normalized line text; no renderer or input stack is replaced.
+
+Three related fixes satisfy qualification probes:
+
+- Nested `runRevocableOp` calls share one undo record, including the first
+  operation in an empty history; exception cleanup restores transaction state.
+- Select-all expands a fold at the document tail so its contents are included.
+- Forward delete between paired delimiters uses the existing paired backward
+  delete operation. Upstream's own `deleteForward()` test fails without this
+  correction on the selected SDK, including in a pristine baseline checkout.
+
+No private APIs are exposed. Public consumers should encapsulate engine types.
+This patch alone does not qualify a complete editor: geometry, rendering,
+worker lifecycle, real browser/native input and the full Foundation W1 matrix
+remain separate gates.
+
+## Verification and upgrades
+
+Use Flutter 3.47.1 and bundled Dart 3.13.1. `flutter test` passes 151 tests,
+including eleven exact-source regressions in `test/exact_source_test.dart`.
+They cover UTF-8 equality, 64 KiB source load, mixed separators, synchronous
+observation, copy/paste channel roundtrip, composing state, folds, command
+mutations, multi-edit undo and 250 deterministic randomized range edits.
+Clipboard and IME tests are framework-level probes, not physical OS evidence.
+
+`flutter analyze --no-pub` reports upstream deprecations, missing override and
+unused debug declarations; it is not a passing analysis gate. No warning
+suppression is added by this patch. Foundation separately analyzes its package.
+
+Pin a full pushed fork SHA in consumers without dependency overrides. Before
+upgrading, compare the three patched source files with the upstream release,
+run all upstream and exact-source tests, then rerun Foundation's entire W1 and
+platform acceptance matrix. Remove the patch only when the replacement
+upstream release passes those same requirements. Do not claim source fidelity
+from normalized-text comparisons or drop mixed-separator tests to upgrade.

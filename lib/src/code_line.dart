@@ -395,7 +395,16 @@ class CodeLine {
   final String text;
   final List<CodeLine> chunks;
 
-  const CodeLine(this.text, [this.chunks = const[]]);
+  /// Exact separator after this logical line, when source preservation is enabled.
+  /// Null uses the controller's selected newline convention.
+  final TextLineBreak? sourceLineBreak;
+
+  const CodeLine(this.text, [this.chunks = const[], this.sourceLineBreak]);
+
+  /// Separator after the last logical line, including folded children.
+  TextLineBreak trailingLineBreak(TextLineBreak fallback) => chunks.isEmpty
+      ? sourceLineBreak ?? fallback
+      : chunks.last.trailingLineBreak(fallback);
 
   @override
   bool operator ==(Object other) {
@@ -404,11 +413,12 @@ class CodeLine {
     }
     return other is CodeLine
         && other.text == text
+        && other.sourceLineBreak == sourceLineBreak
         && listEquals(other.chunks, chunks);
   }
 
   @override
-  int get hashCode => Object.hash(text, chunks);
+  int get hashCode => Object.hash(text, Object.hashAll(chunks), sourceLineBreak);
 
   int get length => text.length;
 
@@ -476,16 +486,25 @@ class CodeLine {
 
   CodeLine copyWith({
     String? text,
-    List<CodeLine>? chunks
+    List<CodeLine>? chunks,
+    TextLineBreak? sourceLineBreak,
   }) {
     return CodeLine(
       text ?? this.text,
-      chunks ?? this.chunks
+      chunks ?? this.chunks,
+      sourceLineBreak ?? this.sourceLineBreak,
     );
   }
 
-  String asString(int start, TextLineBreak lineBreak) {
-    return [substring(start), ...chunks.map((e) => e.asString(0, lineBreak))].join(lineBreak.value);
+  String asString(int start, TextLineBreak lineBreak, [bool preserveLineBreaks = false]) {
+    final StringBuffer result = StringBuffer(substring(start));
+    TextLineBreak separator = preserveLineBreaks ? sourceLineBreak ?? lineBreak : lineBreak;
+    for (final CodeLine child in chunks) {
+      result.write(separator.value);
+      result.write(child.asString(0, lineBreak, preserveLineBreaks));
+      separator = preserveLineBreaks ? child.trailingLineBreak(lineBreak) : lineBreak;
+    }
+    return result.toString();
   }
 
   List<String> flat() {
@@ -1000,7 +1019,8 @@ class CodeLineOptions {
 
   const CodeLineOptions({
     this.lineBreak = TextLineBreak.lf,
-    this.indentSize = _defaultIndentSize
+    this.indentSize = _defaultIndentSize,
+    this.preserveLineBreaks = false,
   });
 
   /// Line break symbols, like LF, CRLF.
@@ -1011,18 +1031,24 @@ class CodeLineOptions {
   /// Indent length, default value is 2.
   final int indentSize;
 
+  /// Preserve input separators in values, clipboard and undo history.
+  /// [lineBreak] still controls newly inserted line breaks.
+  final bool preserveLineBreaks;
+
   CodeLineOptions copyWith({
     TextLineBreak? lineBreak,
     int? indentSize,
+    bool? preserveLineBreaks,
   }) {
     return CodeLineOptions(
       lineBreak: lineBreak ?? this.lineBreak,
       indentSize: indentSize ?? this.indentSize,
+      preserveLineBreaks: preserveLineBreaks ?? this.preserveLineBreaks,
     );
   }
 
   @override
-  int get hashCode => Object.hash(lineBreak, indentSize);
+  int get hashCode => Object.hash(lineBreak, indentSize, preserveLineBreaks);
 
   @override
   bool operator ==(Object other) {
@@ -1031,7 +1057,8 @@ class CodeLineOptions {
     }
     return other is CodeLineOptions
         && other.lineBreak == lineBreak
-        && other.indentSize == indentSize;
+        && other.indentSize == indentSize
+        && other.preserveLineBreaks == preserveLineBreaks;
   }
 
   String get indent => ' ' * indentSize;

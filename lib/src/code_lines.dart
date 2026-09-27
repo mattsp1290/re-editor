@@ -12,8 +12,21 @@ class CodeLines {
     return CodeLines.of([]);
   }
 
-  factory CodeLines.fromText(String text) {
-    return text.codeLines;
+  factory CodeLines.fromText(String text, {bool preserveLineBreaks = false}) {
+    if (!preserveLineBreaks || text.isEmpty) {
+      return text.codeLines;
+    }
+    final List<CodeLine> lines = [];
+    int start = 0;
+    for (final Match match in RegExp(r'\r\n|\r|\n').allMatches(text)) {
+      final TextLineBreak separator = match.group(0) == '\r\n'
+          ? TextLineBreak.crlf
+          : match.group(0) == '\r' ? TextLineBreak.cr : TextLineBreak.lf;
+      lines.add(CodeLine(text.substring(start, match.start), const [], separator));
+      start = match.end;
+    }
+    lines.add(CodeLine(text.substring(start)));
+    return CodeLines.of(lines);
   }
 
   factory CodeLines.from(CodeLines codeLines) {
@@ -250,7 +263,7 @@ class CodeLines {
     segments.clear();
   }
 
-  String asString(TextLineBreak lineBreak, [bool expandChunks = true]) {
+  String asString(TextLineBreak lineBreak, [bool expandChunks = true, bool preserveLineBreaks = false]) {
     final StringBuffer sb = StringBuffer();
     final int length = this.length;
     int count = 0;
@@ -258,12 +271,12 @@ class CodeLines {
       for (final CodeLine codeLine in segment.codeLines) {
         count++;
         if (expandChunks) {
-          sb.write(codeLine.asString(0, lineBreak));
+          sb.write(codeLine.asString(0, lineBreak, preserveLineBreaks));
         } else {
           sb.write(codeLine.text);
         }
         if (count != length) {
-          sb.write(lineBreak.value);
+          sb.write((preserveLineBreaks ? codeLine.trailingLineBreak(lineBreak) : lineBreak).value);
         }
       }
     }
