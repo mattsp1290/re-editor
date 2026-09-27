@@ -1774,6 +1774,10 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
     if (replacement.isEmpty && range.isCollapsed) {
       return;
     }
+    if (options.preserveLineBreaks && _replaceAtCrLfSeam(replacement, range)) {
+      makeCursorCenterIfInvisible();
+      return;
+    }
     final List<CodeLine> replaceCodeLines = CodeLines.fromText(replacement, preserveLineBreaks: options.preserveLineBreaks).toList();
     final CodeLines newCodeLines = codeLines.sublines(0, range.startIndex);
     int index = 0;
@@ -1819,6 +1823,47 @@ class _CodeLineEditingControllerImpl extends ValueNotifier<CodeLineEditingValue>
       return line.charCount + lineBreak.value.length;
     }
     return line.asString(0, lineBreak, true).length + line.trailingLineBreak(lineBreak).value.length;
+  }
+
+  // A CR and LF that meet across an edit boundary become one logical separator.
+  // Reparse only this uncommon case; ordinary edits keep the existing fold tree.
+  // The native value/history machinery still owns the entire edit and its undo.
+  bool _replaceAtCrLfSeam(String replacement, CodeLineSelection range) {
+    int rawOffset(int index, int offset) {
+      for (int i = 0; i < index; i++) {
+        offset += _sourceLengthWithSeparator(codeLines[i]);
+      }
+      return offset;
+    }
+    final int start = rawOffset(range.startIndex, range.startOffset);
+    final int end = rawOffset(range.endIndex, range.endOffset);
+    final String source = text;
+    final bool precedingCr = start > 0 && source.codeUnitAt(start - 1) == 13;
+    final bool followingLf = end < source.length && source.codeUnitAt(end) == 10;
+    if (!(precedingCr && replacement.startsWith('\n')) &&
+        !(followingLf && replacement.endsWith('\r')) &&
+        !(replacement.isEmpty && precedingCr && followingLf)) {
+      return false;
+    }
+    final String updated = source.replaceRange(start, end, replacement);
+    final CodeLines lines = CodeLines.fromText(updated, preserveLineBreaks: true);
+    int caret = start + replacement.length;
+    if (caret > 0 && caret < updated.length &&
+        updated.codeUnitAt(caret - 1) == 13 && updated.codeUnitAt(caret) == 10) {
+      caret++;
+    }
+    int lineIndex = 0;
+    while (lineIndex < lines.length - 1 && caret > lines[lineIndex].length) {
+      caret -= _sourceLengthWithSeparator(lines[lineIndex]);
+      lineIndex++;
+    }
+    value = CodeLineEditingValue(
+      codeLines: lines,
+      selection: CodeLineSelection.collapsed(
+        index: lineIndex, offset: caret, affinity: range.extentAffinity,
+      ),
+    );
+    return true;
   }
 
   void _replaceAll(Pattern pattern, String replacement) {

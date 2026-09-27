@@ -72,6 +72,20 @@ void main() {
     exact(controller, 'aX\r\nb\rc\n');
   });
 
+  test('replacement seams form one logical CRLF line break', () {
+    for (var variant = 0; variant < 2; variant++) {
+      final source = variant == 0 ? '\na' : '\ra';
+      final controller = create(source);
+      controller.selection = CodeLineSelection.collapsed(index: variant, offset: 0);
+      controller.replaceSelection(variant == 0 ? '\r' : '\n');
+      exact(controller, '\r\na');
+      expect(controller.lineCount, 2);
+      expect(controller.selection, const CodeLineSelection.collapsed(index: 1, offset: 0));
+      controller.undo();
+      exact(controller, source);
+    }
+  });
+
   test('nested folds retain source and copied complete selection', () {
     const source = '{\r\n {\r  x\n }\r\n}\nend';
     final controller = create(source);
