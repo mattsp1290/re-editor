@@ -104,6 +104,7 @@ class _CodeEditableState extends State<_CodeEditable> with AutomaticKeepAliveCli
 
   late _CodeHighlighter _highlighter;
   late CodeIndicatorValueNotifier _codeIndicatorValueNotifier;
+  Timer? _autocompleteTimer;
 
   @override
   bool get wantKeepAlive => widget.focusNode.hasFocus;
@@ -175,6 +176,7 @@ class _CodeEditableState extends State<_CodeEditable> with AutomaticKeepAliveCli
 
   @override
   void dispose() {
+    _autocompleteTimer?.cancel();
     widget.controller.removeListener(_onCodeInputChanged);
     widget.inputController.removeListener(_onCodeUserInputChanged);
     _highlighter.dispose();
@@ -353,7 +355,8 @@ class _CodeEditableState extends State<_CodeEditable> with AutomaticKeepAliveCli
       return;
     }
     // Delay 50ms to update the auto-complate prompt words.
-    Future.delayed(const Duration(milliseconds: 50), () {
+    _autocompleteTimer?.cancel();
+    _autocompleteTimer = Timer(const Duration(milliseconds: 50), () {
       _updateAutoCompleteState(true);
     });
   }
@@ -449,17 +452,19 @@ class _CodeEditableState extends State<_CodeEditable> with AutomaticKeepAliveCli
 class _CodeCursorBlinkController extends ValueNotifier<bool> {
 
   Timer? _timer;
+  Timer? _initialBlinkTimer;
 
   _CodeCursorBlinkController() : super(false);
 
   void startBlink() {
+    _initialBlinkTimer?.cancel();
     if (_timer != null) {
       _timer!.cancel();
     }
     _timer = Timer.periodic(_kCursorBlinkHalfPeriod, _cursorTick);
     if (kIsAndroid || kIsIOS) {
       // Wait selection position to update
-      Future.delayed(const Duration(milliseconds: 100), () {
+      _initialBlinkTimer = Timer(const Duration(milliseconds: 100), () {
         value = true;
       });
     } else {
@@ -468,6 +473,8 @@ class _CodeCursorBlinkController extends ValueNotifier<bool> {
   }
 
   void stopBlink() {
+    _initialBlinkTimer?.cancel();
+    _initialBlinkTimer = null;
     if (_timer == null) {
       return;
     }
